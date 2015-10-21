@@ -5,7 +5,8 @@ include common.mak
 
 PAGE_SEQUENCES = $(shell seq $(START_PAGE) $(END_PAGE))
 
-PAGE_BASE_URL = http://jandan.net/pic/page-
+JANDAN := pic
+PAGE_BASE_URL = http://jandan.net/$(JANDAN)/page-
 
 all: metadata
 
@@ -22,7 +23,7 @@ directory-page-$(1): | directories
 
 $$(CACHE_DIR)/page-$(1).html: | directory-page-$(1)
 	@echo "[WGET] Page $(1)"
-	@$(WGET) "$$(PAGE_BASE_URL)$(1)" -U $(USER_AGENT) -O $$@
+	@$(WGET) "$$(PAGE_BASE_URL)$(1)" -U $(USER_AGENT) -O $$@ 2> /dev/null
 
 $$(META_DIR)/page-$(1).json: $$(CACHE_DIR)/page-$(1).html
 	@echo "[META] Page $(1)"
@@ -32,10 +33,11 @@ $$(MAK_DIR)/page-$(1).mak: $$(META_DIR)/page-$(1).json
 	@echo "[MAK]  Page $(1)"
 	@echo "include common.mak" > $$@
 	@cat $$< | jq '.[] | if has("org_src") then .org_src else .src end' \
-		| sed -nE 's/"(http.*)\/([^\/]*)"/$$$$(DIST_DIR)\/page-$(1)\/\2:\
+		| cat -n \
+		| sed -nE 's/^[[:space:]]*([0-9]+)[[:space:]]*"(http.*)\/([^\/]*)"/$$$$(DIST_DIR)\/page-$(1)\/\1-\3:\
 					,;@echo "[DOWN] $$$$@"\
-					,;@$$$$(WGET) \1\/\2 -O $$$$@\
-					,,images: $$$$(DIST_DIR)\/page-$(1)\/\2,/gp' \
+					,;@$$$$(WGET) \2\/\3 -O $$$$@ 2> \/dev\/null\
+					,,images: $$$$(DIST_DIR)\/page-$(1)\/\1-\3,/gp' \
 		| tr ',' '\n' | tr ';' '\t' \
 		>> $$@
 
